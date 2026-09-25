@@ -1062,3 +1062,15 @@ Unregister-ScheduledTask -TaskPath '\Fantasy\' -TaskName 'MYPFF identity rebuild
 
 Backup pré-criação da tabela: `C:\Users\Erico Mello\fantasy_backups\MYPFF_Complete_pre_W1F2_2026-09-25.db`.
 
+### Correção dos `sleeper_id` da `mypff` (OPT-B37-F2, 25/09/2026)
+
+Os `sleeper_id` da tabela `mypff` foram corrigidos pela `mypff_identity` (script de uso único
+`predictor/scripts/mypff_b37_fix.py`, autorizado pela regra `MYPFF-*` via B37): 130 linhas de 15 legados
+errados reescritas e 168 linhas de homônimos anuladas em 47 IDs compartilhados com árbitro. Restam 68 IDs
+compartilhados sem árbitro, sem escrita. A `mypff_weekly` **não** foi tocada (67 linhas carregam IDs copiados).
+Backup pré-correção: `C:\Users\Erico Mello\fantasy_backups\MYPFF_Complete_pre_B37F2_2026-09-25.db`.
+
+⚠️ **O Render ainda não tem a correção:** a cópia de produção do MYPFF só muda pelo runbook §20, e o seed de maio
+do repositório do Optimizer também carrega os homônimos. Até essa cópia rodar, as telas do Render que calculam
+por requisição leem os homônimos (pendência nomeada no item B37).
+
