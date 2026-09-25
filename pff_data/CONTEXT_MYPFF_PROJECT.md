@@ -965,3 +965,29 @@ A partir de 25/09, **qualquer mudança de forma** no MYPFF (tabela nova, source 
 natureza nova) passa antes por um item `MYPFF-*` — regra do `DEV_METHODOLOGY.md`. A execução semanal
 acima é rotina do fluxo registrado aqui e não precisa de item.
 
+### Mapa de identidade `mypff_identity` (MYPFF-W1-F2, 25/09/2026)
+
+A identidade para consumo semanal **não** vem mais das colunas de ID da `mypff`/`mypff_weekly` (cópia
+por linha, que congelou erros de método). Vem da tabela **`mypff_identity`**, reconstruída do zero a
+cada execução por `predictor/scripts/mypff_identity.py` (infraestrutura do banco compartilhado
+hospedada no Predictor; revisitar o local antes de duplicar).
+
+| | |
+|---|---|
+| Chave | `pff_id` (o `player_id` do PFF) |
+| Universo | `mypff_weekly` + quem tem linha NFL na `mypff` + quem tem `draft_year` na `mypff` (4.819 em 25/09) |
+| Escopo | `nfl` · `drafted_no_nfl` (só `exact_ffids`) · `ncaa_only` (nunca recebe ID por nome) |
+| Métodos | `exact_ffids` · `ambiguous_ffids` · `name_normalized` (só `nfl`, só skill, candidato único) · `unmatched` · `ncaa_undrafted` |
+| Marcas | `conflict` (legado da `mypff` difere) · `shared_sleeper` (mesmo `sleeper_id` para mais de um `pff_id`) |
+| Fonte primária | `ff_playerids` (DynastyProcess / ecossistema nflverse), `pff_id → sleeper_id` na mesma linha |
+| Fallback | `players/nfl` do Sleeper, nome normalizado (caixa, acento, pontuação, sufixo Jr./Sr./II/III/IV/V) |
+| Downloads | `pff_data/identity/ff_playerids_<data>.csv` e `sleeper_players_<data>.json` |
+| Auditoria | `mypff_identity_meta`: uma linha por reconstrução (carimbo, `content_sha256`, fontes, contagens) |
+
+Invocação (a partir de `predictor/`): `python -m scripts.mypff_identity --rebuild` (ou `--dry-run`,
+`--check`; `--db` para outro banco; `--ff-file`/`--sleeper-file` para fixar fontes). **A tarefa semanal
+do Cowork ainda não chama o script** — a integração é edição do prompt da tarefa, com o owner, e chamará
+`--rebuild --db <banco que será trocado>` depois do `load_weekly`.
+
+Backup pré-criação da tabela: `C:\Users\Erico Mello\fantasy_backups\MYPFF_Complete_pre_W1F2_2026-09-25.db`.
+
