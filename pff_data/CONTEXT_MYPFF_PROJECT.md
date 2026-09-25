@@ -985,9 +985,80 @@ hospedada no Predictor; revisitar o local antes de duplicar).
 | Auditoria | `mypff_identity_meta`: uma linha por reconstrução (carimbo, `content_sha256`, fontes, contagens) |
 
 Invocação (a partir de `predictor/`): `python -m scripts.mypff_identity --rebuild` (ou `--dry-run`,
-`--check`; `--db` para outro banco; `--ff-file`/`--sleeper-file` para fixar fontes). **A tarefa semanal
-do Cowork ainda não chama o script** — a integração é edição do prompt da tarefa, com o owner, e chamará
-`--rebuild --db <banco que será trocado>` depois do `load_weekly`.
+`--check`; `--db` para outro banco; `--ff-file`/`--sleeper-file` para fixar fontes).
+
+**`--check` depois de um rebuild:** ele recomputa com os arquivos de fonte registrados na última linha
+da `mypff_identity_meta`. Se o rebuild foi feito em cópia (`--db /tmp/...`) ou no sandbox do Cowork, o
+meta aponta para caminhos que não existem no Windows, e o `--check` falha ao abrir. Nesse caso, passar
+`--ff-file`/`--sleeper-file` com os arquivos de `pff_data/identity/`. Com o rebuild semanal no Windows,
+o meta guarda caminhos do Windows e o problema não aparece. Decisão MYPFF-W1-F3: só documentar, sem
+ajuste no script.
+
+### Rebuild semanal da identidade — no Windows, não no Cowork (MYPFF-W1-F3, 25/09/2026)
+
+**Por quê:** a rede do sandbox da tarefa do Cowork bloqueia `raw.githubusercontent.com` e
+`api.sleeper.app` (403 no proxy, teste de 25/09). O navegador interno libera o GitHub, mas recusa
+`api.sleeper.app` por restrição de segurança, sem contorno. A lista de domínios só é configurável em
+planos Team/Enterprise. No Windows o script funciona. **A tarefa do Cowork não reconstrói a identidade.**
+O passo 5b que ela tinha é removido pelo owner antes de 30/09.
+
+**Como:** o Agendador de Tarefas do Windows roda, **quartas às 10:00**, o wrapper
+`predictor/scripts/mypff_identity_weekly.py`. Ele espera a tarefa do Cowork do dia terminar e só então
+chama `python -m scripts.mypff_identity --rebuild` contra o MYPFF real.
+
+| Regra | Detalhe |
+|---|---|
+| Pronto para rodar | existe `weekly/_log_<data>*.txt`, **e** nenhuma `weekly/run_<data>_<HHMM>` começou depois do último log do dia (execução em andamento), **e** não existe `MYPFF_Complete.db.new_tmp` (troca em curso) |
+| Espera | reverifica a cada 15 min, até 3 h (`--interval`, `--max-wait`) |
+| Segunda linha de defesa | se houver colisão mesmo assim, a guarda do Cowork (banco vivo × retrato do início) cancela a troca; o banco não corrompe |
+| Log próprio | `pff_data/identity/_windows_rebuild_<data>.log` (acrescenta; uma linha por verificação, saída completa do rebuild, linha `DESFECHO`) |
+| Código de saída | 0 rodou (de imediato ou após esperar) · 1 erro ou timeout do rebuild (15 min), mapa anterior intacto · 2 abortou por limite · 3 erro de configuração |
+
+**Tarefa agendada — criação** (PowerShell do owner, uma vez):
+```powershell
+$py   = 'C:\Users\Erico Mello\AppData\Local\Programs\Python\Python313\python.exe'
+$repo = 'C:\Users\Erico Mello\Fantasy\predictor'
+$action    = New-ScheduledTaskAction -Execute $py -Argument '-m scripts.mypff_identity_weekly' -WorkingDirectory $repo
+$trigger   = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Wednesday -At 10:00
+$settings  = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew `
+               -ExecutionTimeLimit (New-TimeSpan -Hours 4) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
+Register-ScheduledTask -TaskPath '\Fantasy\' -TaskName 'MYPFF identity rebuild (W1-F3)' `
+  -Action $action -Trigger $trigger -Settings $settings -Principal $principal `
+  -Description 'MYPFF-W1-F3: rebuild da mypff_identity depois da tarefa do Cowork das 07:00'
+```
+- `python.exe` é o do Python 3.13 com `python-dotenv` (confirmado pelo owner). O `WindowsApps\python.exe`
+  é o stub da Store: não usar.
+- O console fica aberto durante a espera. Para rodar sem janela, trocar por `pythonw.exe` da mesma
+  pasta: o wrapper funciona sem stdout, e o registro fica no log próprio e no código de saída.
+
+**Inspecionar, testar e remover:**
+```powershell
+Get-ScheduledTask     -TaskPath '\Fantasy\' -TaskName 'MYPFF identity rebuild (W1-F3)'
+Get-ScheduledTaskInfo -TaskPath '\Fantasy\' -TaskName 'MYPFF identity rebuild (W1-F3)'   # LastRunTime, LastTaskResult, NextRunTime
+schtasks /Query /TN "\Fantasy\MYPFF identity rebuild (W1-F3)" /V /FO LIST
+Start-ScheduledTask   -TaskPath '\Fantasy\' -TaskName 'MYPFF identity rebuild (W1-F3)'   # execucao manual
+Unregister-ScheduledTask -TaskPath '\Fantasy\' -TaskName 'MYPFF identity rebuild (W1-F3)' -Confirm:$false
+```
+
+**Só com o owner logado** (`-LogonType Interactive`, trade-off aceito para não guardar senha):
+- **PC desligado ou sem sessão às 10:00:** o `StartWhenAvailable` roda a tarefa quando ele ligar.
+- **O wrapper ainda exige o log do Cowork do dia.** Se a tarefa do Cowork também não rodou (PC desligado
+  às 07:00), o wrapper aborta por limite (exit 2). O desfecho correto é rodar as duas à mão: primeiro a
+  do Cowork, depois `Start-ScheduledTask` (ou o wrapper com `--date`).
+
+**Roteiro de validação no Windows** (owner, fora de quarta):
+1. A partir de `predictor/`, rodar `python -m scripts.mypff_identity --rebuild` e anotar o
+   `content_sha256` da linha `GRAVADO`.
+2. Criar um log fictício do dia:
+   `New-Item "C:\Users\Erico Mello\Fantasy\pff_data\weekly\_log_$(Get-Date -Format yyyy-MM-dd)_TESTE.txt"`.
+3. `Start-ScheduledTask` e aguardar.
+   - `Get-ScheduledTaskInfo` deve mostrar `LastTaskResult = 0`.
+   - `identity\_windows_rebuild_<hoje>.log` deve ter `DESFECHO: REBUILD RODOU de imediato` com o
+     **mesmo** `content_sha256` do passo 1 (as fontes baixadas no mesmo dia são as mesmas, salvo
+     publicação entre os dois downloads).
+4. Rodar `python -m scripts.mypff_identity --check`: exit 0.
+5. Apagar o `_log_<hoje>_TESTE.txt`.
 
 Backup pré-criação da tabela: `C:\Users\Erico Mello\fantasy_backups\MYPFF_Complete_pre_W1F2_2026-09-25.db`.
 
