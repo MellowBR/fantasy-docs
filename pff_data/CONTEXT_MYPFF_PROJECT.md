@@ -93,7 +93,7 @@ Filtro utilizado: **REGPO** (Regular Season + Playoffs).
 | Formato | SQLite 3 |
 | Tabela | `mypff` (tabela única) |
 | Rows | 60,743 |
-| Colunas | 96 (90 PFF + 6 integração) — **98 desde 22/09/2026** (+`epa`, `positive_epa_percent`, anexadas ao fim e preenchidas só em `*_2026_2027`; ver §21) |
+| Colunas | 96 (90 PFF + 6 integração) — **98 desde 22/09/2026** (+`epa`, `positive_epa_percent`, anexadas ao fim; vazias na `mypff` desde a limpeza de 25/09, preenchidas na `mypff_weekly`; ver §21) |
 | Jogadores únicos | ~17,000+ (NFL + NCAA) |
 | Fontes (CSVs) | 69 (46 rushing/receiving + 23 passing) |
 | Duplicatas | 0 |
@@ -904,6 +904,13 @@ Anual, logo após a fase F2 de cada ciclo `MYPFF-UN`. Substituir `YYYY`/`UN` pel
 
 ## 21. Dados in-season 2026 — carga de 22/09 e fluxo semanal da `mypff_weekly` (registrado em 25/09/2026, PRED-P19-F1)
 
+> **Atualização 25/09/2026 (PRED-P19-F2a):** a `mypff` **voltou ao estado pré-carga** — as 3.922
+> linhas `*_2026_2027` foram removidas (60.743 linhas, fonte mais nova `2025_2026`; as colunas `epa` e
+> `positive_epa_percent` ficaram). **O dado de 2026 vive só na `mypff_weekly`** (7.805 linhas, intacta),
+> que ainda não tem consumidor. O congelamento operacional foi retirado. Backup pré-limpeza em
+> `C:\Users\Erico Mello\fantasy_backups\MYPFF_Complete_pre_P19F2a_2026-09-25.db`, retido até existir
+> um `MYPFF_Complete.pre_weekly_*.db` validado. A tabela de estado abaixo registra 22–25/09.
+
 ### O que existe no banco
 
 **Carga de 22/09/2026 (15:17–15:36, owner, intencional, via Cowork).** Objetivo: ter os dados de 2026
@@ -925,7 +932,7 @@ Estado medido em 25/09 (read-only):
 | `mypff_weekly` | 7.805 rows, 100 colunas — NFL W1–W2, NCAA W0–W3 |
 | Reprodutibilidade | os 6 CSVs de temporada em `pff_data/` e os 18 semanais em `pff_data/weekly/` batem linha a linha com o banco |
 
-⛔ **As linhas `*_2026_2027` da `mypff` são lidas como TEMPORADA COMPLETA** por ~100 pontos de consumo
+⛔ **(Até 25/09) As linhas `*_2026_2027` da `mypff` eram lidas como TEMPORADA COMPLETA** por ~100 pontos de consumo
 no Predictor e no Optimizer (inventário no P19 do `optimizer_improvements.md`). Nenhum consumidor
 conhece a `mypff_weekly`. Até a F2 do P19 vale o **congelamento operacional** registrado nos CLAUDE.md
 dos dois projetos: nada de recálculo, publicação ou deploy de scores contra o MYPFF vivo, nem cópia do
