@@ -1,0 +1,10 @@
+# Repositorio exclusivo de docs transversais do ecossistema Fantasy (decisao do owner, 25/09/2026).
+# Modo whitelist: tudo ignorado; so os arquivos abaixo entram. Nenhum banco, CSV, script
+# ou repo aninhado (fantasy_manager, fantasy_optimizer, predictor) pode ser versionado aqui.
+*
+!.gitignore
+!DEV_METHODOLOGY.md
+!CONTEXT_FANTASY_PROJECTS.md
+!pff_data/
+pff_data/*
+!pff_data/CONTEXT_MYPFF_PROJECT.md
