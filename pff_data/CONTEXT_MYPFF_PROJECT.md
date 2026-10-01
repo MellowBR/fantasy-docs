@@ -836,15 +836,32 @@ Aplicável **após cada ciclo anual MYPFF-UN** (reabastecimento pós-draft — v
 
 ### Etapa 1 — Atualizar o seed do MYPFF no repo
 
+⭐ **O seed leva SÓ a tabela `mypff` (decisão do owner, 01/10/2026, publicação B37/B39).** O MYPFF local também
+tem `mypff_weekly` (parcial da temporada em curso), `mypff_identity` e `mypff_identity_meta`. O Optimizer de
+produção não lê nenhuma delas, e o parcial fica fora de produção (P19). ⛔ **Não usar `cp` do arquivo inteiro.**
+
 ```bash
 cd /c/Users/Erico\ Mello/Fantasy/fantasy_optimizer
-cp ../pff_data/MYPFF_Complete.db ./MYPFF_Complete.db
+python - <<'EOF'
+import os, sqlite3
+out = "MYPFF_Complete.db.new"
+if os.path.exists(out): os.remove(out)
+src = sqlite3.connect("file:../pff_data/MYPFF_Complete.db?mode=ro", uri=True)
+src.execute("VACUUM INTO ?", (out,)); src.close()
+d = sqlite3.connect(out)
+for (t,) in d.execute("SELECT name FROM sqlite_master WHERE type='table' AND name <> 'mypff'").fetchall():
+    d.execute(f"DROP TABLE {t}")
+d.commit(); d.execute("VACUUM"); print(d.execute("PRAGMA integrity_check").fetchone()[0], d.execute("SELECT COUNT(*) FROM mypff").fetchone()[0]); d.close()
+EOF
+mv MYPFF_Complete.db.new MYPFF_Complete.db
+sha256sum MYPFF_Complete.db      # anotar: é o sha que a etapa 3 confere no Shell
 git add MYPFF_Complete.db
 git commit -m "MYPFF seed refresh — class YYYY (MYPFF-UN)"
 git push origin main
 ```
 
-Commit binário (~24 MB) — o push demora um pouco. Normal.
+Conferir antes do commit que a `mypff` do seed é idêntica à local, linha a linha (na publicação de 01/10: 60.743
+linhas, 98 colunas). Commit binário (~22-24 MB): o push demora um pouco. Normal.
 
 ### Etapa 2 — Aguardar o redeploy automático do Render
 
@@ -868,12 +885,15 @@ ls -la /data/MYPFF_Complete.db                     # produtivo atual (a substitu
 # 3c — cópia atômica fase 1: copia o seed novo para arquivo temporário
 cp /opt/render/project/src/MYPFF_Complete.db /data/MYPFF_Complete.db.new
 
-# 3d — backup não-sobrescritivo do atual + rename atômico do novo
-[ ! -f /data/MYPFF_Complete_pre_UN.db ] && mv /data/MYPFF_Complete.db /data/MYPFF_Complete_pre_UN.db || echo "Backup _pre_UN.db já existe — preservando"
+# 3d — backup não-sobrescritivo do atual (nome com data do ciclo) + rename atômico do novo
+# ⛔ Se imprimir PARAR, NÃO rodar o mv seguinte: ele substituiria o atual sem backup (defeito da
+#    versão anterior deste bloco, que só avisava e seguia — corrigido em 01/10/2026).
+[ ! -f /data/MYPFF_Complete_pre_<ciclo>_<data>.db ] && mv /data/MYPFF_Complete.db /data/MYPFF_Complete_pre_<ciclo>_<data>.db || echo "backup ja existe - PARAR"
 mv /data/MYPFF_Complete.db.new /data/MYPFF_Complete.db
+# 3e' — conferir: sha256sum /data/MYPFF_Complete.db = sha da etapa 1; contagem e integrity_check via python3
 
 # 3e — confirmar
-ls -la /data/MYPFF_Complete.db /data/MYPFF_Complete_pre_UN.db
+ls -la /data/MYPFF_Complete.db /data/MYPFF_Complete_pre_<ciclo>_<data>.db
 ```
 
 **Por que `cp .new` + `mv` em vez de `mv` direto:** o `mv` no mesmo filesystem é um rename POSIX atômico. Copiar primeiro para `.new` e depois renomear evita uma janela em que `/data/MYPFF_Complete.db` não existe — janela que quebraria qualquer request `/player/<name>` em andamento (a página consome o MYPFF via `optimizer/loader.py:get_pff_stats`). Conexões SQLite já abertas continuam servidas pelo descriptor antigo até fecharem; conexões novas pegam o arquivo novo de imediato.
@@ -891,7 +911,7 @@ Esperar ver **"Draft YYYY"** no card de trajetória. Se aparecer nos dois, o cic
 
 ### Rollback
 
-- **Backup imediato:** `mv /data/MYPFF_Complete_pre_UN.db /data/MYPFF_Complete.db` (reverte ao estado anterior em segundos).
+- **Backup imediato:** `mv /data/MYPFF_Complete_pre_<ciclo>_<data>.db /data/MYPFF_Complete.db` (reverte ao estado anterior em segundos).
 - **Snapshot do disco:** aba **Disk** → escolher snapshot diário anterior → **Restore** (reverte o disco inteiro em ~minutos).
 
 ### Cadência
@@ -1070,7 +1090,11 @@ errados reescritas e 168 linhas de homônimos anuladas em 47 IDs compartilhados 
 compartilhados sem árbitro, sem escrita. A `mypff_weekly` **não** foi tocada (67 linhas carregam IDs copiados).
 Backup pré-correção: `C:\Users\Erico Mello\fantasy_backups\MYPFF_Complete_pre_B37F2_2026-09-25.db`.
 
-⚠️ **O Render ainda não tem a correção:** a cópia de produção do MYPFF só muda pelo runbook §20, e o seed de maio
+~~⚠️ **O Render ainda não tem a correção:** a cópia de produção do MYPFF só muda pelo runbook §20, e o seed de maio
 do repositório do Optimizer também carrega os homônimos. Até essa cópia rodar, as telas do Render que calculam
-por requisição leem os homônimos (pendência nomeada no item B37).
+por requisição leem os homônimos (pendência nomeada no item B37).~~ **✅ Resolvido em 01/10/2026:** o seed do
+Optimizer foi atualizado (só a `mypff`, sha256 `041e5dd6…a46f9ac0`, commit `bf7e3d1`), o owner trocou o
+`/data/MYPFF_Complete.db` pelo §20 e o PROC1 foi conferido. **Backup de produção:**
+`/data/MYPFF_Complete_pre_B37B39_2026-10-01.db` (o seed de maio, com os homônimos). **Retenção:** até a próxima troca
+do MYPFF em produção validada por PROC1 (MYPFF-U2); depois pode ser apagado.
 
