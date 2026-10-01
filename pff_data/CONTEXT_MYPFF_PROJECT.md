@@ -985,6 +985,30 @@ A partir de 25/09, **qualquer mudança de forma** no MYPFF (tabela nova, source 
 natureza nova) passa antes por um item `MYPFF-*` — regra do `DEV_METHODOLOGY.md`. A execução semanal
 acima é rotina do fluxo registrado aqui e não precisa de item.
 
+### ⭐ Estado vigente: MODO MANUAL até a migração (01/10/2026 — item C24)
+
+O Cowork anunciou a **descontinuação das tarefas agendadas neste computador** (sem tarefas novas a partir de
+06/10/2026, sem manutenção nas existentes, que "ainda funcionam"). Em 30/09 a tarefa não rodou: estava como
+execução única, e o wrapper abortou por limite (exit 2, correto). Em 01/10 a carga foi disparada à mão e rodou
+limpa; o STEP 0 restaurou o cron (quartas 07:00), **mas não se conta com ele**.
+
+**Toda quarta, nesta ordem, até o C24 fechar:**
+1. Disparar **à mão** a tarefa semanal do Cowork e esperar o `weekly/_log_<data>.txt` com o banco atualizado.
+2. Disparar o rebuild da identidade:
+   `Start-ScheduledTask -TaskPath '\Fantasy\' -TaskName 'MYPFF identity rebuild (W1-F3)'`.
+   O wrapper encontra o log do dia e roda de imediato. Conferir `DESFECHO: REBUILD RODOU` em
+   `identity/_windows_rebuild_<data>.log`.
+
+Se o cron restaurado rodar sozinho às 07:00 e o wrapper das 10:00 também, não há nada a fazer. Se não rodar, os
+dois passos acima são o desfecho. O roteiro de validação e as regras do wrapper descritos abaixo continuam válidos.
+
+**Divergência semanal × SEASON não é, por si, falha de export.** Na carga de 01/10, o Deebo Samuel (NFL Receiving)
+somou 79 jardas nas semanas contra 159 no SEASON. Na W03 ele não recebeu passe: foi uma lateral depois da recepção
+de outro jogador, com as jardas contadas como corrida. É **classificação de jogada** diferente entre os dois cortes.
+A nota do `_log_2026-10-01.txt` (linha 58) que chama isso de "falha do export PFF" está errada; o log não foi
+reescrito. Para o consumo in-season (P19): tolerância a divergências pequenas, com registro, e um corte canônico
+(provavelmente SEASON).
+
 ### Mapa de identidade `mypff_identity` (MYPFF-W1-F2, 25/09/2026)
 
 A identidade para consumo semanal **não** vem mais das colunas de ID da `mypff`/`mypff_weekly` (cópia
@@ -995,7 +1019,7 @@ hospedada no Predictor; revisitar o local antes de duplicar).
 | | |
 |---|---|
 | Chave | `pff_id` (o `player_id` do PFF) |
-| Universo | `mypff_weekly` + quem tem linha NFL na `mypff` + quem tem `draft_year` na `mypff` (4.819 em 25/09) |
+| Universo | `mypff_weekly` + quem tem linha NFL na `mypff` + quem tem `draft_year` na `mypff` (4.819 em 25/09; 4.936 em 01/10, `content_sha256` `61fca09b4c78fd4a`, `conflict` = 1: Brandon Williams) |
 | Escopo | `nfl` · `drafted_no_nfl` (só `exact_ffids`) · `ncaa_only` (nunca recebe ID por nome) |
 | Métodos | `exact_ffids` · `ambiguous_ffids` · `name_normalized` (só `nfl`, só skill, candidato único) · `unmatched` · `ncaa_undrafted` |
 | Marcas | `conflict` (legado da `mypff` difere) · `shared_sleeper` (mesmo `sleeper_id` para mais de um `pff_id`) |
