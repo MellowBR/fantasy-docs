@@ -26,7 +26,7 @@ Sleeper/
 ├── rodar_sleeper.bat
 │
 └── PFF_Data/                       ← Subpasta com TODOS os dados PFF + banco
-    ├── MYPFF_Complete.db           ← Banco SQLite principal (76 colunas, 53,662 rows)
+    ├── MYPFF_Complete.db           ← Banco SQLite principal (`mypff`: 98 colunas, 60.743 linhas)
     ├── MYPFF_Technical_Reference.docx  ← Documento técnico detalhado
     ├── CONTEXT_MYPFF_PROJECT.md    ← Este arquivo
     │
