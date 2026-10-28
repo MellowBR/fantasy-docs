@@ -343,13 +343,19 @@ Inicialmente nomeamos os arquivos com erro (PFF 2025 → 2024_2025). **Correçã
 
 ---
 
-## 11. Lista Completa de Colunas (96)
+## 11. Lista Completa de Colunas (98)
 
 ### PFF (90 colunas — rushing/receiving + passing)
 `accuracy_percent`, `aimed_passes`, `attempts`, `avg_depth_of_target`, `avg_time_to_throw`, `avoided_tackles`, `bats`, `big_time_throws`, `breakaway_attempts`, `breakaway_percent`, `breakaway_yards`, `btt_rate`, `caught_percent`, `completion_percent`, `completions`, `contested_catch_rate`, `contested_receptions`, `contested_targets`, `declined_penalties`, `def_gen_pressures`, `designed_yards`, `drop_rate`, `dropbacks`, `drops`, `elu_recv_mtf`, `elu_rush_mtf`, `elu_yco`, `elusive_rating`, `explosive`, `first_downs`, `franchise_id`, `fumbles`, `gap_attempts`, `grades_hands_drop`, `grades_hands_fumble`, `grades_offense`, `grades_offense_penalty`, `grades_pass`, `grades_pass_block`, `grades_pass_route`, `grades_run`, `grades_run_block`, `hit_as_threw`, `inline_rate`, `inline_snaps`, `interceptions`, `longest`, `pass_block_rate`, `pass_blocks`, `pass_plays`, `passing_snaps`, `penalties`, `player`, `player_game_count`, `player_id`, `position`, `pressure_to_sack_rate`, `qb_rating`, `rec_yards`, `receptions`, `route_rate`, `routes`, `run_plays`, `sack_percent`, `sacks`, `scramble_yards`, `scrambles`, `slot_rate`, `slot_snaps`, `source`, `spikes`, `targeted_qb_rating`, `targets`, `team_name`, `thrown_aways`, `total_touches`, `touchdowns`, `turnover_worthy_plays`, `twp_rate`, `wide_rate`, `wide_snaps`, `yards`, `yards_after_catch`, `yards_after_catch_per_reception`, `yards_after_contact`, `yards_per_reception`, `yco_attempt`, `ypa`, `yprr`, `zone_attempts`
 
 ### Integração (6 colunas)
 `gsis_id`, `sleeper_id`, `draft_year`, `draft_round`, `draft_pick`, `draft_team`
+
+### Anexadas ao fim (2 colunas)
+`epa`, `positive_epa_percent`
+
+Anexadas em 22/09/2026. **Vazias na `mypff`** desde a limpeza da PRED-P19-F2a (25/09/2026). Nenhum consumidor as
+lê.
 
 ---
 
